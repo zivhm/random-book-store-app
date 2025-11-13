@@ -9,7 +9,7 @@ This application fetches real book data from Open Library API and automatically 
 - **OpenShift cluster access** (4.x or later)
 - **oc CLI** installed and logged in: `oc login`
 - **Container build tool**: `docker`
-- **Container registry**: Quay.io, Docker Hub, or OpenShift internal registry
+- **Container registry**: Docker Hub, or OpenShift internal registry
 - **Git repository** (optional, for S2I deployments)
 
 ## Deployment Options
@@ -22,6 +22,7 @@ This method builds the container directly in OpenShift without needing external 
 
 - Local OpenShift cluster (CRC, MicroShift, or local cluster)
 - Sufficient disk space (~10GB free)
+
 #### Step 1: Login to OpenShift
 
 ```bash
