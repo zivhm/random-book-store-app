@@ -241,7 +241,7 @@ oc rollout status deployment/random-book-store
 
 ---
 
-### Option 2: Deploy Using Pre-built Container (Docker Hub)
+### Option 2: Deploy Using Pre-built Container (Docker Hub) -- NEED TO VERIFY THIS --
 
 This method uses Docker Hub to store your container image. **Best for production deployments or sharing images.**
 
@@ -449,29 +449,64 @@ S2I supports custom build hooks that run during the build process. **Hooks are u
 | `assemble` | Custom build logic | Override default build process |
 | `run` | Container startup | Custom startup commands |
 
-**How to Create Hooks:**
+**How to Create Working Hooks:**
 
-1. Create a `.s2i/bin/` directory in your repository root:
+**IMPORTANT**: The Python S2I builder doesn't automatically execute `pre_build` and `post_build` hooks. You must create a **custom `assemble` script** that explicitly calls them.
+
+**Step 1: Create the `.s2i/bin/` directory**
 
 ```bash
 mkdir -p .s2i/bin
-chmod +x .s2i/bin/*  # Make scripts executable
 ```
 
-2. Add hook scripts to `.s2i/bin/`
+**Step 2: Create Custom Assemble Script** (`.s2i/bin/assemble`)
 
-**Example: Pre-Build Hook** (`.s2i/bin/pre_build`)
+This is the key file that makes hooks work:
 
 ```bash
+cat > .s2i/bin/assemble << 'EOF'
+#!/bin/bash
+# Custom S2I assemble script that calls hooks
+
+set -e
+
+echo "---> Running custom assemble script with hooks support"
+
+# Run pre_build hook if it exists
+if [ -f /tmp/src/.s2i/bin/pre_build ]; then
+  echo "---> Executing pre_build hook..."
+  /tmp/src/.s2i/bin/pre_build
+fi
+
+# Call the default Python S2I assemble script
+echo "---> Calling default Python assemble script..."
+/usr/libexec/s2i/assemble
+
+# Run post_build hook if it exists
+# Check both possible locations
+if [ -f /tmp/src/.s2i/bin/post_build ]; then
+  echo "---> Executing post_build hook..."
+  /tmp/src/.s2i/bin/post_build
+elif [ -f ./.s2i/bin/post_build ]; then
+  echo "---> Executing post_build hook (from current dir)..."
+  ./.s2i/bin/post_build
+else
+  echo "---> Post-build hook not found, skipping..."
+fi
+
+echo "---> Custom assemble script completed"
+EOF
+```
+
+**Step 3: Create Pre-Build Hook** (`.s2i/bin/pre_build`)
+
+```bash
+cat > .s2i/bin/pre_build << 'EOF'
 #!/bin/bash
 # .s2i/bin/pre_build
 # Runs before pip install -r requirements.txt
 
 echo "🔧 Running pre-build hook..."
-
-# Install additional system packages if needed
-# (requires escalated permissions in BuildConfig)
-# yum install -y some-package
 
 # Setup environment
 export BUILD_TIME=$(date)
@@ -481,22 +516,18 @@ echo "Build started at: $BUILD_TIME"
 python --version
 
 echo "✅ Pre-build hook completed"
+EOF
 ```
 
-**Example: Post-Build Hook** (`.s2i/bin/post_build`)
+**Step 4: Create Post-Build Hook** (`.s2i/bin/post_build`)
 
 ```bash
+cat > .s2i/bin/post_build << 'EOF'
 #!/bin/bash
 # .s2i/bin/post_build
 # Runs after dependencies are installed
 
 echo "🧪 Running post-build hook..."
-
-# Run tests (optional - comment out if you don't want tests during build)
-# python -m pytest tests/ || exit 1
-
-# Initialize database schema (if needed)
-# python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all()"
 
 # Verify all dependencies are installed
 pip list
@@ -506,19 +537,18 @@ find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
 echo "✅ Post-build hook completed"
+EOF
 ```
 
-**Example: Custom Run Hook** (`.s2i/bin/run`)
+**Step 5: Create Custom Run Hook (Optional)** (`.s2i/bin/run`)
 
 ```bash
+cat > .s2i/bin/run << 'EOF'
 #!/bin/bash
 # .s2i/bin/run
 # Custom startup command (overrides CMD in Dockerfile)
 
 echo "🚀 Starting Random Book Store application..."
-
-# Run database migrations (if you add them later)
-# python manage.py db upgrade
 
 # Start Gunicorn with custom settings
 exec gunicorn \
@@ -528,54 +558,66 @@ exec gunicorn \
   --access-logfile - \
   --error-logfile - \
   wsgi:application
+EOF
 ```
 
-**Add Hooks to Your Repository:**
+**Step 6: Make Scripts Executable and Track in Git**
 
 ```bash
-# Commit and push
+# Make all scripts executable
+chmod +x .s2i/bin/*
+
+# Add to git and update permissions
 git add .s2i/
-git commit -m "Add S2I build hooks"
+git update-index --chmod=+x .s2i/bin/assemble
+git update-index --chmod=+x .s2i/bin/pre_build
+git update-index --chmod=+x .s2i/bin/post_build
+git update-index --chmod=+x .s2i/bin/run
+
+# Verify git has executable permissions (should show 100755)
+git ls-files --stage .s2i/bin/
+
+# Commit and push
+git commit -m "Add S2I build hooks with custom assemble script"
 git push
 ```
 
-**Trigger a New Build with Hooks:**
+**Step 7: Trigger a New Build with Hooks**
 
 ```bash
 # Start a new build (hooks will run automatically)
 # The repo has to be either public or accessible after authentication
-oc start-build random-book-store --follow 
-
-# Watch build logs to see hooks in action
-oc logs -f buildconfig/random-book-store
+oc start-build random-book-store --follow
 ```
 
 **Your build output should now show:**
 ```
 Cloning "https://github.com/your-username/random-book-store-app.git" ...
----> Installing application source...
+    Commit:    7090553c32713e053d3d771b30991d39ba590a4c (Add custom S2I assemble script to call hooks)
+    Author:    your-username <your@email.com>
+    Date:    Fri Nov 14 01:34:23 2025 +0200
+
+STEP 9/10: RUN /tmp/scripts/assemble
+---> Running custom assemble script with hooks support
+---> Executing pre_build hook...
 🔧 Running pre-build hook...
-Python 3.12.1
-pip 24.0 from /opt/app-root/lib/python3.12/site-packages/pip (python 3.12)
+Build started at: Thu Nov 13 11:38:35 PM UTC 2025
+Python 3.12.9
 ✅ Pre-build hook completed
+---> Calling default Python assemble script...
+---> Installing application source ...
 ---> Installing dependencies ...
-Collecting Flask==3.0.0
+Collecting Flask==3.0.0 (from -r requirements.txt (line 2))
+  Downloading flask-3.0.0-py3-none-any.whl.metadata (3.6 kB)
 ...
-Successfully installed Flask-3.0.0 ...
-🧪 Running post-build hook...
-Flask                         3.0.0
-gunicorn                      21.2.0
-...
-✅ Post-build hook completed
-Build complete, pushing image ...
+Successfully installed APScheduler-3.10.4 Flask-3.0.0 Flask-Login-0.6.3 ...
+---> Custom assemble script completed
+STEP 10/10: CMD /tmp/scripts/run
+
+Successfully pushed image-registry.openshift-image-registry.svc:5000/random-book-store-app/random-book-store@sha256:...
 Push successful
 ```
 
-**Common Issues:**
-
-1. **Hooks not executing**: Ensure scripts are executable (`chmod +x .s2i/bin/*`)
-2. **Permission errors**: Some system operations require BuildConfig changes
-3. **Hook fails build**: Hooks that exit with non-zero status will fail the build
 
 #### Step 3: Create Persistent Storage (Optional)
 
@@ -699,28 +741,6 @@ oc get events --sort-by='.lastTimestamp'
 oc logs <pod-name>
 ```
 
-### Permission Issues
-
-OpenShift runs containers with random UIDs. Ensure:
-- Container runs as non-root (UID 1001)
-- Files have proper group permissions (GID 0)
-- Ports are non-privileged (>= 1024)
-
-```bash
-# Check security context
-oc describe pod <pod-name> | grep -A 10 "Security Context"
-```
-
-### Database Issues
-
-```bash
-# Check if PVC is bound
-oc get pvc random-book-store-pvc
-
-# Check volume mount
-oc describe pod <pod-name> | grep -A 5 "Mounts"
-```
-
 ## Cleanup
 
 ### Delete All Resources
@@ -785,45 +805,3 @@ oc scale deployment/random-book-store --replicas=3
 oc autoscale deployment/random-book-store \
   --min=2 --max=10 --cpu-percent=75
 ```
-
-**Resource Tuning:**
-Edit `openshift/deployment.yaml` and adjust:
-- `requests`: Guaranteed resources
-- `limits`: Maximum resources allowed
-
-### 3. Monitoring and Logging
-
-- **Built-in Health Checks**: Already configured (`/health`, `/ready`)
-- **Prometheus Metrics**: Available via OpenShift monitoring
-- **Logs**: Access with `oc logs -f deployment/random-book-store`
-- **Events**: Monitor with `oc get events --sort-by='.lastTimestamp'`
-
-### 4. Persistent Storage
-
-The application uses a PVC for SQLite database:
-- **Storage Class**: Adjust in `openshift/pvc.yaml` based on your cluster
-- **Backups**: Schedule regular database backups
-- **Size**: Default is 1Gi, increase if needed
-
-### 5. TLS/SSL
-
-Routes use edge TLS termination by default:
-- Certificates managed by OpenShift
-- HTTP automatically redirects to HTTPS
-- Custom certificates: Update `openshift/route.yaml`
-
-## Additional Resources
-
-- [OpenShift Documentation](https://docs.openshift.com/)
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [Open Library API](https://openlibrary.org/developers/api)
-- [Python S2I Builder](https://github.com/sclorg/s2i-python-container)
-- [Red Hat UBI Images](https://catalog.redhat.com/software/containers/search)
-
-## Support
-
-For issues or questions:
-1. Check pod logs: `oc logs -f deployment/random-book-store`
-2. Review events: `oc get events`
-3. Check pod status: `oc describe pod <pod-name>`
-4. Test health endpoints: `/health` and `/ready`
