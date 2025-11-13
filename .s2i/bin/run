@@ -1,0 +1,17 @@
+#!/bin/bash
+# .s2i/bin/run
+# Custom startup command (overrides CMD in Dockerfile)
+
+echo "🚀 Starting Random Book Store application..."
+
+# Run database migrations (if you add them later)
+# python manage.py db upgrade
+
+# Start Gunicorn with custom settings
+exec gunicorn \
+  --bind 0.0.0.0:8080 \
+  --workers 4 \
+  --timeout 120 \
+  --access-logfile - \
+  --error-logfile - \
+  wsgi:application

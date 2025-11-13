@@ -1,0 +1,20 @@
+#!/bin/bash
+# .s2i/bin/post_build
+# Runs after dependencies are installed
+
+echo "🧪 Running post-build hook..."
+
+# Run tests (optional - comment out if you don't want tests during build)
+# python -m pytest tests/ || exit 1
+
+# Initialize database schema (if needed)
+# python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all()"
+
+# Verify all dependencies are installed
+pip list
+
+# Cleanup unnecessary files
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+echo "✅ Post-build hook completed"

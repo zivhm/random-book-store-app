@@ -1,0 +1,18 @@
+#!/bin/bash
+# .s2i/bin/pre_build
+# Runs before pip install -r requirements.txt
+
+echo "🔧 Running pre-build hook..."
+
+# Install additional system packages if needed
+# (requires escalated permissions in BuildConfig)
+# yum install -y some-package
+
+# Setup environment
+export BUILD_TIME=$(date)
+echo "Build started at: $BUILD_TIME"
+
+# Verify Python version
+python --version
+
+echo "✅ Pre-build hook completed"
