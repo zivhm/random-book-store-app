@@ -38,6 +38,16 @@ data/
 .pytest_cache/
 .coverage
 htmlcov/
+test_*.py
+
+# UV/pip tools
+uv.lock
+.python-version
+pyproject.toml
+
+# Local scripts
+reset_database.sh
 
 # Others
 .claude/
+main.py

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Bookstore{% endblock %}
+{% block title %}Home - Random Book Store{% endblock %}
 
 {% block content %}
 <div class="jumbotron bg-light p-5 rounded-3 mb-4">
-    <h1 class="display-4">Welcome to Bookstore</h1>
-    <p class="lead">Discover your next favorite book from our curated collection</p>
+    <h1 class="display-4">Welcome to Random Book Store</h1>
+    <p class="lead">Discover something new! Our catalog refreshes every 10 minutes with random books from Open Library</p>
     <hr class="my-4">
-    <p>Browse our catalogue and find great deals on books across all genres.</p>
-    <a class="btn btn-primary btn-lg" href="{{ url_for('main.catalogue') }}" role="button">Browse Catalogue</a>
+    <p>Browse our catalog and find great deals on books across all genres.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('main.catalog') }}" role="button">Browse Catalog</a>
 </div>
 
 <h2 class="mb-4">Featured Books</h2>
@@ -16,6 +16,7 @@
     {% for book in books %}
     <div class="col-md-4 mb-4">
         <div class="card h-100">
+            <img src="{{ book.cover_image }}" class="card-img-top book-cover" alt="{{ book.title }}" onerror="this.src='{{ url_for('static', filename='images/book-placeholder.svg') }}'">
             <div class="card-body">
                 <h5 class="card-title">{{ book.title }}</h5>
                 <h6 class="card-subtitle mb-2 text-muted">{{ book.author }}</h6>

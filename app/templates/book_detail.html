@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}{{ book.title }} - Bookstore{% endblock %}
+{% block title %}{{ book.title }} - Random Book Store{% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-4 mb-4">
+        <img src="{{ book.cover_image }}" class="img-fluid book-cover-detail rounded shadow" alt="{{ book.title }}" onerror="this.src='{{ url_for('static', filename='images/book-placeholder.svg') }}'">
+    </div>
+    <div class="col-md-5">
         <h1>{{ book.title }}</h1>
         <h4 class="text-muted">by {{ book.author }}</h4>
         <hr>
@@ -16,7 +19,7 @@
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card">
             <div class="card-body">
                 <h3 class="text-success">${{ "%.2f"|format(book.price) }}</h3>
@@ -32,7 +35,7 @@
                 {% else %}
                     <button class="btn btn-secondary w-100 mb-2" disabled>Out of Stock</button>
                 {% endif %}
-                <a href="{{ url_for('main.catalogue') }}" class="btn btn-outline-primary w-100">Back to Catalogue</a>
+                <a href="{{ url_for('main.catalog') }}" class="btn btn-outline-primary w-100">Back to Catalog</a>
             </div>
         </div>
     </div>

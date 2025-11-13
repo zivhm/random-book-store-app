@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: bookstore-pvc
+  name: random-book-store-pvc
 spec:
   accessModes:
   - ReadWriteOnce

@@ -1,13 +1,16 @@
 # OpenShift Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Bookstore application to OpenShift.
+Complete guide for deploying the Random Book Store application to OpenShift 4.x.
+
+This application fetches real book data from Open Library API and automatically refreshes with new random books every 10 minutes, providing a dynamic e-commerce demonstration.
 
 ## Prerequisites
 
-- Access to an OpenShift cluster
-- `oc` CLI tool installed and configured
-- `podman` or `docker` for building container images
-- Access to a container registry (e.g., Quay.io, Docker Hub, or OpenShift internal registry)
+- **OpenShift cluster access** (4.x or later)
+- **oc CLI** installed and logged in: `oc login`
+- **Container build tool**: `podman` or `docker`
+- **Container registry**: Quay.io, Docker Hub, or OpenShift internal registry
+- **Git repository** (optional, for S2I deployments)
 
 ## Deployment Options
 
@@ -19,23 +22,23 @@ This method gives you full control over the container image.
 
 ```bash
 # Build using podman
-podman build -t bookstore:latest .
+podman build -t random-bookstore:latest .
 
 # Or using docker
-docker build -t bookstore:latest .
+docker build -t random-bookstore:latest .
 ```
 
 #### Step 2: Tag and Push to Registry
 
 ```bash
 # Example with Quay.io
-podman tag bookstore:latest quay.io/<your-username>/bookstore:latest
-podman push quay.io/<your-username>/bookstore:latest
+podman tag random-bookstore:latest quay.io/<your-username>/random-bookstore:latest
+podman push quay.io/<your-username>/random-bookstore:latest
 
 # Example with OpenShift internal registry
-oc create imagestream bookstore
-podman tag bookstore:latest default-route-openshift-image-registry/<your-project>/bookstore:latest
-podman push default-route-openshift-image-registry/<your-project>/bookstore:latest
+oc create imagestream random-bookstore
+podman tag random-bookstore:latest default-route-openshift-image-registry/<your-project>/random-bookstore:latest
+podman push default-route-openshift-image-registry/<your-project>/random-bookstore:latest
 ```
 
 #### Step 3: Update Deployment Manifest
@@ -47,8 +50,8 @@ spec:
   template:
     spec:
       containers:
-      - name: bookstore
-        image: quay.io/<your-username>/bookstore:latest  # Update this
+      - name: random-bookstore
+        image: quay.io/<your-username>/random-bookstore:latest  # Update this
 ```
 
 Or use the all-in-one manifest (`openshift/all-in-one.yaml`) and update the image there.
@@ -57,7 +60,7 @@ Or use the all-in-one manifest (`openshift/all-in-one.yaml`) and update the imag
 
 ```bash
 # Create a new project (optional)
-oc new-project bookstore-app
+oc new-project random-bookstore-app
 
 # Deploy using individual manifests
 oc apply -f openshift/secret.yaml
@@ -77,13 +80,13 @@ oc apply -f openshift/all-in-one.yaml
 oc get pods
 
 # Check deployment
-oc get deployment bookstore
+oc get deployment random-bookstore
 
 # Check service
-oc get svc bookstore
+oc get svc random-bookstore
 
 # Get the application URL
-oc get route bookstore
+oc get route random-bookstore
 ```
 
 ### Option 2: Deploy Using Source-to-Image (S2I)
@@ -104,29 +107,29 @@ git push -u origin main
 
 ```bash
 # Create new project
-oc new-project bookstore-app
+oc new-project random-bookstore-app
 
 # Create secret for session management
-oc create secret generic bookstore-secret \
+oc create secret generic random-bookstore-secret \
   --from-literal=secret-key=$(openssl rand -hex 32)
 
 # Create application from Git repository using Python 3.12
 oc new-app python:3.12~<your-git-repo-url> \
-  --name=bookstore \
-  --env SECRET_KEY=$(oc get secret bookstore-secret -o jsonpath='{.data.secret-key}' | base64 -d)
+  --name=random-bookstore \
+  --env SECRET_KEY=$(oc get secret random-bookstore-secret -o jsonpath='{.data.secret-key}' | base64 -d)
 
 # Or if using a specific branch
-oc new-app python:3.12~<your-git-repo-url>#<branch-name> --name=bookstore
+oc new-app python:3.12~<your-git-repo-url>#<branch-name> --name=random-bookstore
 ```
 
 #### Step 3: Create Persistent Storage (Optional)
 
 ```bash
 oc apply -f openshift/pvc.yaml
-oc set volume deployment/bookstore \
+oc set volume deployment/random-bookstore \
   --add --name=data \
   --type=persistentVolumeClaim \
-  --claim-name=bookstore-pvc \
+  --claim-name=random-bookstore-pvc \
   --mount-path=/opt/app-root/src/data
 ```
 
@@ -134,8 +137,8 @@ oc set volume deployment/bookstore \
 
 ```bash
 # Create route with TLS
-oc create route edge bookstore \
-  --service=bookstore \
+oc create route edge random-bookstore \
+  --service=random-bookstore \
   --insecure-policy=Redirect
 
 # Or apply the route manifest
@@ -145,43 +148,45 @@ oc apply -f openshift/route.yaml
 #### Step 5: Get Application URL
 
 ```bash
-oc get route bookstore -o jsonpath='{.spec.host}'
+oc get route random-bookstore -o jsonpath='{.spec.host}'
 ```
 
 ## Post-Deployment Configuration
 
-### Update Secret Key (Important!)
+### Update Secret Key (Important for Production!)
+
+**Before deploying to production**, change the default secret key:
 
 ```bash
 # Generate a secure random key
 SECRET_KEY=$(openssl rand -hex 32)
 
 # Update the secret
-oc patch secret bookstore-secret \
+oc patch secret random-bookstore-secret \
   -p "{\"stringData\":{\"secret-key\":\"$SECRET_KEY\"}}"
 
-# Restart pods to pick up new secret
-oc rollout restart deployment/bookstore
+# Restart pods to apply changes
+oc rollout restart deployment/random-bookstore
 ```
+
+Alternatively, edit `openshift/secret.yaml` before deploying and replace the default value.
 
 ### Scale the Application
 
 ```bash
-# Scale up
-oc scale deployment/bookstore --replicas=3
+oc scale deployment/random-bookstore --replicas=3
 
 # Scale down
-oc scale deployment/bookstore --replicas=1
+oc scale deployment/random-bookstore --replicas=1
 ```
 
 ### View Logs
 
 ```bash
 # View logs from all pods
-oc logs -l app=bookstore
+oc logs -l app=random-bookstore
 
-# Follow logs in real-time
-oc logs -f deployment/bookstore
+oc logs -f deployment/random-bookstore
 
 # View logs from specific pod
 oc logs <pod-name>
@@ -191,10 +196,10 @@ oc logs <pod-name>
 
 ```bash
 # Get the route URL
-oc get route bookstore
+oc get route random-bookstore
 
 # The URL will be something like:
-# https://bookstore-<project-name>.apps.<cluster-domain>
+# https://random-bookstore-<project-name>.apps.<cluster-domain>
 ```
 
 ## Monitoring
@@ -203,7 +208,7 @@ oc get route bookstore
 
 ```bash
 # Get route host
-ROUTE_HOST=$(oc get route bookstore -o jsonpath='{.spec.host}')
+ROUTE_HOST=$(oc get route random-bookstore -o jsonpath='{.spec.host}')
 
 # Check liveness
 curl https://$ROUTE_HOST/health
@@ -216,7 +221,7 @@ curl https://$ROUTE_HOST/ready
 
 ```bash
 # View pod resource usage
-oc adm top pods -l app=bookstore
+oc adm top pods -l app=random-bookstore
 
 # View node resource usage
 oc adm top nodes
@@ -253,7 +258,7 @@ oc describe pod <pod-name> | grep -A 10 "Security Context"
 
 ```bash
 # Check if PVC is bound
-oc get pvc bookstore-pvc
+oc get pvc random-bookstore-pvc
 
 # Check volume mount
 oc describe pod <pod-name> | grep -A 5 "Mounts"
@@ -271,7 +276,7 @@ oc delete -f openshift/
 oc delete -f openshift/all-in-one.yaml
 
 # Delete the project entirely
-oc delete project bookstore-app
+oc delete project random-bookstore-app
 ```
 
 ### Delete Specific Resources
@@ -295,32 +300,97 @@ oc delete secret bookstore-secret
 
 ## Production Considerations
 
-1. **Database**: Use PostgreSQL instead of SQLite
-   - Deploy PostgreSQL database
-   - Update `DATABASE_URL` environment variable
+### 1. Database (PostgreSQL Recommended)
 
-2. **Secrets**: Use OpenShift secrets for sensitive data
-   - Never commit secrets to Git
-   - Rotate secrets regularly
+For production, replace SQLite with PostgreSQL:
 
-3. **Resource Limits**: Adjust based on load
-   - Monitor resource usage
-   - Scale horizontally as needed
+```bash
+# Deploy PostgreSQL from template
+oc new-app postgresql-persistent \
+  --param DATABASE_NAME=bookstore \
+  --param DATABASE_USER=bookstore \
+  --param DATABASE_PASSWORD=$(openssl rand -base64 32)
 
-4. **Persistent Storage**: Plan for data persistence
-   - Regular backups
-   - Appropriate storage class
+# Update deployment with PostgreSQL connection
+oc set env deployment/bookstore \
+  DATABASE_URL="postgresql://bookstore:password@postgresql:5432/bookstore"
+```
 
-5. **Monitoring**: Set up monitoring and alerts
-   - Prometheus metrics
-   - Logging aggregation
+### 2. Security Best Practices
 
-6. **TLS/SSL**: Ensure secure communication
-   - Use edge termination for routes
-   - Keep certificates up to date
+- **Secrets Management**
+  - Never commit secrets to Git
+  - Use OpenShift secrets (`oc create secret`)
+  - Rotate secrets regularly
+  - Use different secrets per environment
+
+- **Network Policies**
+  - Restrict pod-to-pod communication
+  - Limit external access
+
+- **RBAC**
+  - Use service accounts with minimal permissions
+  - Avoid using cluster-admin
+
+### 3. Scaling and Resources
+
+**Horizontal Scaling:**
+```bash
+oc scale deployment/bookstore --replicas=3
+```
+
+**Autoscaling:**
+```bash
+oc autoscale deployment/bookstore \
+  --min=2 --max=10 --cpu-percent=75
+```
+
+**Resource Tuning:**
+Edit `openshift/deployment.yaml` and adjust:
+- `requests`: Guaranteed resources
+- `limits`: Maximum resources allowed
+
+### 4. Monitoring and Logging
+
+- **Built-in Health Checks**: Already configured (`/health`, `/ready`)
+- **Prometheus Metrics**: Available via OpenShift monitoring
+- **Logs**: Access with `oc logs -f deployment/random-bookstore`
+- **Events**: Monitor with `oc get events --sort-by='.lastTimestamp'`
+
+### 5. Persistent Storage
+
+The application uses a PVC for SQLite database:
+- **Storage Class**: Adjust in `openshift/pvc.yaml` based on your cluster
+- **Backups**: Schedule regular database backups
+- **Size**: Default is 1Gi, increase if needed
+
+### 6. TLS/SSL
+
+Routes use edge TLS termination by default:
+- Certificates managed by OpenShift
+- HTTP automatically redirects to HTTPS
+- Custom certificates: Update `openshift/route.yaml`
+
+## Performance Tips
+
+1. **Use Gunicorn workers**: Already configured (4 workers)
+2. **Enable HTTP caching**: Add caching headers for static assets
+3. **CDN**: Use CDN for static files in production
+4. **Database indexing**: Add indexes for frequently queried fields
+5. **Connection pooling**: Configure for PostgreSQL
 
 ## Additional Resources
 
 - [OpenShift Documentation](https://docs.openshift.com/)
 - [Flask Documentation](https://flask.palletsprojects.com/)
+- [Open Library API](https://openlibrary.org/developers/api)
 - [Python S2I Builder](https://github.com/sclorg/s2i-python-container)
+- [Red Hat UBI Images](https://catalog.redhat.com/software/containers/search)
+
+## Support
+
+For issues or questions:
+1. Check pod logs: `oc logs -f deployment/bookstore`
+2. Review events: `oc get events`
+3. Check pod status: `oc describe pod <pod-name>`
+4. Test health endpoints: `/health` and `/ready`

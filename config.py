@@ -32,3 +32,7 @@ class Config:
 
     # Application settings
     BOOKS_PER_PAGE = 12
+
+    # Book refresh settings
+    BOOKS_REFRESH_INTERVAL_MINUTES = int(os.environ.get('BOOKS_REFRESH_INTERVAL_MINUTES', 10))
+    BOOKS_COUNT = int(os.environ.get('BOOKS_COUNT', 12))

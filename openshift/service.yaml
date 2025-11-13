@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: bookstore
+  name: random-book-store
   labels:
-    app: bookstore
+    app: random-book-store
 spec:
   type: ClusterIP
   ports:
@@ -12,4 +12,4 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: bookstore
+    app: random-book-store

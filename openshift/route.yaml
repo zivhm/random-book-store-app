@@ -1,13 +1,13 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: bookstore
+  name: random-book-store
   labels:
-    app: bookstore
+    app: random-book-store
 spec:
   to:
     kind: Service
-    name: bookstore
+    name: random-book-store
   port:
     targetPort: http
   tls:

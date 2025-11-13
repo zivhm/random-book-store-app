@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: bookstore-secret
+  name: random-book-store-secret
 type: Opaque
 stringData:
   secret-key: "change-me-to-a-secure-random-string-in-production"
@@ -10,7 +10,7 @@ stringData:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: bookstore-pvc
+  name: random-book-store-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -21,22 +21,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bookstore
+  name: random-book-store
   labels:
-    app: bookstore
+    app: random-book-store
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: bookstore
+      app: random-book-store
   template:
     metadata:
       labels:
-        app: bookstore
+        app: random-book-store
     spec:
       containers:
-      - name: bookstore
-        image: bookstore:latest
+      - name: random-book-store
+        image: random-book-store:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -45,7 +45,7 @@ spec:
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: bookstore-secret
+              name: random-book-store-secret
               key: secret-key
         - name: DATABASE_URL
           value: "sqlite:///data/bookstore.db"
@@ -78,7 +78,7 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
-          claimName: bookstore-pvc
+          claimName: random-book-store-pvc
       securityContext:
         runAsNonRoot: true
         seccompProfile:
@@ -87,9 +87,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: bookstore
+  name: random-book-store
   labels:
-    app: bookstore
+    app: random-book-store
 spec:
   type: ClusterIP
   ports:
@@ -98,18 +98,18 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: bookstore
+    app: random-book-store
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: bookstore
+  name: random-book-store
   labels:
-    app: bookstore
+    app: random-book-store
 spec:
   to:
     kind: Service
-    name: bookstore
+    name: random-book-store
   port:
     targetPort: http
   tls:

@@ -12,5 +12,11 @@ Werkzeug==3.0.1
 # WSGI server
 gunicorn==21.2.0
 
+# HTTP requests
+requests==2.31.0
+
+# Background scheduler for periodic book updates
+APScheduler==3.10.4
+
 # PostgreSQL support (optional, for production)
 psycopg2-binary==2.9.9

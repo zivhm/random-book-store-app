@@ -38,3 +38,47 @@ footer {
 .badge {
     font-size: 0.75rem;
 }
+
+/* Book cover images */
+.book-cover {
+    width: 100%;
+    height: 350px;
+    object-fit: cover;
+    object-position: center;
+    background-color: #f8f9fa;
+}
+
+.book-cover-catalog {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    object-position: center;
+    background-color: #f8f9fa;
+}
+
+.book-cover-detail {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: contain;
+    background-color: #f8f9fa;
+}
+
+/* Ensure card bodies have consistent layout */
+.card-body.d-flex.flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-body.d-flex.flex-column .mt-auto {
+    margin-top: auto !important;
+}
+
+/* Cart thumbnail */
+.cart-book-thumbnail {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

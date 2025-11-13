@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Shopping Cart - Bookstore{% endblock %}
+{% block title %}Shopping Cart - Random Book Store{% endblock %}
 
 {% block content %}
 <h1 class="mb-4">Shopping Cart</h1>
@@ -22,8 +22,13 @@
                 {% for item in cart_items %}
                 <tr>
                     <td>
-                        <strong>{{ item.book.title }}</strong><br>
-                        <small class="text-muted">{{ item.book.author }}</small>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ item.book.cover_image }}" alt="{{ item.book.title }}" class="cart-book-thumbnail me-3" onerror="this.src='{{ url_for('static', filename='images/book-placeholder.svg') }}'">
+                            <div>
+                                <strong>{{ item.book.title }}</strong><br>
+                                <small class="text-muted">{{ item.book.author }}</small>
+                            </div>
+                        </div>
                     </td>
                     <td>${{ "%.2f"|format(item.book.price) }}</td>
                     <td>
@@ -66,15 +71,15 @@
             </div>
         </div>
         <div class="mt-3">
-            <a href="{{ url_for('main.catalogue') }}" class="btn btn-outline-primary w-100">Continue Shopping</a>
+            <a href="{{ url_for('main.catalog') }}" class="btn btn-outline-primary w-100">Continue Shopping</a>
         </div>
     </div>
 </div>
 {% else %}
 <div class="alert alert-info">
     <h4>Your cart is empty</h4>
-    <p>Browse our catalogue and add some books to your cart.</p>
-    <a href="{{ url_for('main.catalogue') }}" class="btn btn-primary">Go to Catalogue</a>
+    <p>Browse our catalog and add some books to your cart.</p>
+    <a href="{{ url_for('main.catalog') }}" class="btn btn-primary">Go to Catalog</a>
 </div>
 {% endif %}
 {% endblock %}
