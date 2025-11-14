@@ -14,17 +14,6 @@ A dynamic Flask-based bookstore that automatically refreshes with random books f
 - Checkout**: Simple checkout process (demo only, no payment processing)
 - Health Checks**: Built-in liveness and readiness probes for Kubernetes/OpenShift
 
-## Technology Stack
-
-- **Backend**: Python 3.12, Flask 3.0, Flask-Login, Flask-SQLAlchemy
-- **Scheduler**: APScheduler for automatic book rotation
-- **Database**: SQLite (development) / PostgreSQL (production ready)
-- **Frontend**: HTML5, CSS3, Bootstrap 5, Jinja2 templates
-- **API Integration**: Open Library API for real book data
-- **WSGI Server**: Gunicorn (production)
-- **Container**: Red Hat UBI9 Python 3.12
-- **Deployment**: OpenShift 4.x / Kubernetes 1.24+
-
 ## Book Data Source & Auto-Refresh
 
 The application uses the **Open Library API** (https://openlibrary.org) to dynamically populate the catalog:
@@ -60,6 +49,17 @@ Set via environment variables:
 ### Shopping Cart
 
 ![Shopping Cart](docs/images/cart.png)
+
+## Technology Stack
+
+- **Backend**: Python 3.12, Flask 3.0, Flask-Login, Flask-SQLAlchemy
+- **Scheduler**: APScheduler for automatic book rotation
+- **Database**: SQLite (development) / PostgreSQL (production ready)
+- **Frontend**: HTML5, CSS3, Bootstrap 5, Jinja2 templates
+- **API Integration**: Open Library API for real book data
+- **WSGI Server**: Gunicorn (production)
+- **Container**: Red Hat UBI9 Python 3.12
+- **Deployment**: OpenShift 4.x / Kubernetes 1.24+
 
 ## Project Structure
 
