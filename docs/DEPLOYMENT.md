@@ -962,4 +962,4 @@ oc delete secret random-book-store-secret
 
 ---
 
-**For questions or issues, refer to the main [README.md](../README.md) or [QUICKSTART.md](../QUICKSTART.md)**
+**For questions or issues, refer to the main [README.md](../README.md) or [QUICKSTART.md](./QUICKSTART.md)**
