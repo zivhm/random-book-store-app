@@ -4,10 +4,6 @@
 
 echo "🔧 Running pre-build hook..."
 
-# Install additional system packages if needed
-# (requires escalated permissions in BuildConfig)
-# yum install -y some-package
-
 # Setup environment
 export BUILD_TIME=$(date)
 echo "Build started at: $BUILD_TIME"

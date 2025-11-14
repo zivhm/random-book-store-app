@@ -2,7 +2,7 @@
 
 Get the Random Book Store app running in minutes! Watch the catalog automatically refresh with new books every 10 minutes.
 
-## Run Locally (Development)
+## Run Locally
 
 ### 1. Clone and Setup
 
@@ -61,105 +61,6 @@ python wsgi.py
 
 ---
 
-## Deploy to OpenShift
-
-### Option 1: Quick Deploy (Container Image)
-
-```bash
-# 1. Build container
-docker build -t random-book-store:latest .
-
-# 2. Tag for your registry
-docker tag random-book-store:latest quay.io/<your-username>/random-book-store:latest
-
-# 3. Push to registry
-docker push quay.io/<your-username>/random-book-store:latest
-
-# 4. Update image in deployment
-sed -i 's|image: random-book-store:latest|image: quay.io/<your-username>/random-book-store:latest|' openshift/all-in-one.yaml
-
-# 5. Deploy everything
-oc apply -f openshift/all-in-one.yaml
-
-# 6. Get your app URL
-oc get route random-book-store
-```
-
-Visit the URL and your app is live! 🎉
-
-### Option 2: Source-to-Image (S2I)
-
-Let OpenShift build the container for you:
-
-```bash
-# Create app from Git
-oc new-app python:3.12~https://github.com/<your-repo>/store-app --name=random-book-store
-
-# Expose externally
-oc expose svc/random-book-store
-
-# Get URL
-oc get route random-book-store
-```
-
-### Option 3: Docker Build & Deploy
-
-```bash
-# Build with Docker
-docker build -t random-book-store:latest .
-docker tag random-book-store:latest <registry>/random-book-store:latest
-docker push <registry>/random-book-store:latest
-
-# Update and deploy
-oc apply -f openshift/all-in-one.yaml
-```
-
----
-
-## Verification
-
-### Check Deployment Status
-
-```bash
-# View pods
-oc get pods
-
-# View logs
-oc logs -f deployment/random-book-store
-
-# Check route
-oc get route random-book-store
-```
-
-### Test Health Endpoints
-
-```bash
-ROUTE=$(oc get route random-book-store -o jsonpath='{.spec.host}')
-
-# Liveness probe
-curl https://$ROUTE/health
-
-# Readiness probe
-curl https://$ROUTE/ready
-```
-
----
-
-## Next Steps
-
-1. **Register an account** on your deployed app
-2. **Browse the catalog** - See real books from Open Library
-3. **Customize** - Modify code and redeploy
-
-## Need Help?
-
-- **Detailed deployment**: See `openshift/DEPLOYMENT.md`
-- **App overview**: See `README.md`
-- **Troubleshooting**: Check pod logs with `oc logs -f deployment/random-book-store`
-
----
-
-
 ## Configuration
 
 ### Change Refresh Interval
@@ -183,3 +84,9 @@ Set how many books to fetch (default: 12):
 export BOOKS_COUNT=20
 python wsgi.py
 ```
+
+---
+
+## Deployment
+
+See the [DEPLOYMENT.md](./DEPLOYMENT.md) guide for instructions on deploying to OpenShift.

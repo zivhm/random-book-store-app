@@ -4,6 +4,32 @@ Complete guide for deploying the Random Book Store application to OpenShift 4.x.
 
 This application fetches real book data from Open Library API and automatically refreshes with new random books every 10 minutes, providing a dynamic e-commerce demonstration.
 
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Deployment Options](#deployment-options)
+  - [Option 1: Local OpenShift Build (Recommended)](#option-1-local-openshift-build-recommended)
+  - [Option 2: Deploy Using Pre-built Container (Docker Hub)](#option-2-deploy-using-pre-built-container-docker-hub----need-to-verify-this--)
+  - [Option 3: Deploy Using Source-to-Image (S2I)](#option-3-deploy-using-source-to-image-s2i)
+    - [S2I Build Hooks](#s2i-build-hooks-optional-but-recommended)
+    - [GitHub Webhook Setup](#step-6-set-up-github-webhook-optional---automatic-builds)
+    - [Manual Build Workflow](#manual-build-workflow-recommended-for-local-crc)
+- [Post-Deployment Configuration](#post-deployment-configuration)
+  - [Update Secret Key](#update-secret-key-important-for-production)
+  - [Scale the Application](#scale-the-application)
+  - [View Logs](#view-logs)
+  - [Access the Application](#access-the-application)
+- [Monitoring](#monitoring)
+  - [Check Health Endpoints](#check-health-endpoints)
+  - [View Resource Usage](#view-resource-usage)
+- [Cleanup](#cleanup)
+  - [Delete All Resources](#delete-all-resources)
+  - [Delete Specific Resources](#delete-specific-resources)
+
+---
+
 ## Prerequisites
 
 - **OpenShift cluster access** (4.x or later)
@@ -11,6 +37,19 @@ This application fetches real book data from Open Library API and automatically 
 - **Container build tool**: `docker`
 - **Container registry**: Docker Hub, or OpenShift internal registry
 - **Git repository** (optional, for S2I deployments)
+
+## OpenShift Compliance
+
+This application follows OpenShift security and deployment best practices:
+
+- ✅ Runs as **non-root user** (UID 1001)
+- ✅ Uses **non-privileged port** 8080
+- ✅ Implements **health check endpoints** (`/health`, `/ready`)
+- ✅ Proper **file permissions** for random UID assignment (GID 0)
+- ✅ Uses **Red Hat UBI** base image
+- ✅ Includes **resource limits** and **security context**
+
+---
 
 ## Deployment Options
 
@@ -20,8 +59,8 @@ This method builds the container directly in OpenShift without needing external 
 
 #### Prerequisites
 
-- Local OpenShift cluster (CRC, MicroShift, or local cluster)
-- Sufficient disk space (~10GB free)
+- Local OpenShift cluster (CRC or local cluster)
+- Sufficient disk space (~50GB free)
 
 #### Step 1: Login to OpenShift
 
@@ -241,7 +280,9 @@ oc rollout status deployment/random-book-store
 
 ---
 
-### Option 2: Deploy Using Pre-built Container (Docker Hub) -- NEED TO VERIFY THIS --
+### Option 2: Deploy Using Pre-built Container (Docker Hub)
+
+> **⚠️ NOTE:** This deployment method needs to be verified.
 
 This method uses Docker Hub to store your container image. **Best for production deployments or sharing images.**
 
@@ -432,13 +473,17 @@ oc new-app python:3.12-ubi9~<your-git-repo-url> \
     Run 'oc status' to view your app.
 ```
 
-#### S2I Build Hooks (Optional but Recommended)
+---
 
-S2I supports custom build hooks that run during the build process. **Hooks are useful for:**
-- Running database migrations
-- Installing additional system packages
-- Running tests before deployment
-- Custom initialization tasks
+#### S2I Build Hooks
+
+> **💡 INFO:** S2I supports custom build hooks that run during the build process.
+>
+> **Hooks are useful for:**
+> - Running database migrations
+> - Installing additional system packages
+> - Running tests before deployment
+> - Custom initialization tasks
 
 **Supported Hook Types:**
 
@@ -451,7 +496,9 @@ S2I supports custom build hooks that run during the build process. **Hooks are u
 
 **How to Create Working Hooks:**
 
-**IMPORTANT**: The Python S2I builder doesn't automatically execute `pre_build` and `post_build` hooks. You must create a **custom `assemble` script** that explicitly calls them.
+> **⚠️ IMPORTANT:** The Python S2I builder doesn't automatically execute `pre_build` and `post_build` hooks.
+>
+> You **must** create a **custom `assemble` script** that explicitly calls them.
 
 **Step 1: Create the `.s2i/bin/` directory**
 
@@ -648,57 +695,76 @@ oc apply -f openshift/route.yaml
 oc get route random-book-store -o jsonpath='{.spec.host}'
 ```
 
-#### Step 6: Set Up GitHub Webhook (Optional - Automatic Builds) #TODO: need to create secret for the hook manually
+#### Step 6: Set Up GitHub Webhook (Optional - Automatic Builds)
 
-By default, S2I builds are **not triggered automatically** when you push to GitHub. You must manually run `oc start-build` each time. To enable automatic builds on `git push`, set up a webhook:
+> **⚠️ IMPORTANT FOR LOCAL CRC USERS:**
+>
+> **GitHub webhooks will NOT work with local CRC** because GitHub cannot reach `api.crc.testing` from the internet.
+>
+> **Expected behavior**: If you add a webhook while using CRC, you'll see errors in GitHub like:
+> - ❌ **"We couldn't deliver this payload: failed to connect to host"**
+> - This is **completely normal and expected** for local development
+>
+> **Solution for local CRC**: Manually trigger builds after pushing to GitHub:
+> ```bash
+> git push
+> oc start-build random-book-store --follow
+> ```
+
+---
+
+By default, S2I builds are **not triggered automatically** when you push to GitHub. You must manually run `oc start-build` each time. To enable automatic builds on `git push` (for **production clusters only**), set up a webhook:
 
 **1. Get the Webhook URL from OpenShift**
 
 ```bash
-# Get the complete GitHub webhook URL with the secret
-WEBHOOK_URL=$(oc describe bc/random-book-store | grep -oP 'https://[^\s]+/github' | head -1)
-echo $WEBHOOK_URL
+# Extract the webhook secret from the BuildConfig
+WEBHOOK_SECRET=$(oc get bc/random-book-store -o jsonpath='{.spec.triggers[?(@.type=="GitHub")].github.secret}')
+echo "Webhook Secret: $WEBHOOK_SECRET"
+
+# Build the complete webhook URL
+OCP_API=$(oc whoami --show-server)
+NAMESPACE=$(oc project -q)
+WEBHOOK_URL="${OCP_API}/apis/build.openshift.io/v1/namespaces/${NAMESPACE}/buildconfigs/random-book-store/webhooks/${WEBHOOK_SECRET}/github"
+echo "Complete Webhook URL: $WEBHOOK_URL"
 ```
 
 **Your output should look like this:**
 ```
-https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/random-book-store-app-2/buildconfigs/random-book-store/webhooks/abc123def456/github
+Webhook Secret: qwEHhEuk2cvRN5K1bBuE
+Complete Webhook URL: https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/random-book-store-app-2/buildconfigs/random-book-store/webhooks/qnEHDVuC4cvdN5K1bBuE/github
 ```
 
-**3. Add Webhook to GitHub Repository**
+**2. Add Webhook to GitHub Repository** (Production Clusters Only)
 
 - Go to your GitHub repository: `https://github.com/<your-username>/random-book-store-app`
 - Click **Settings** → **Webhooks** → **Add webhook**
 - Configure the webhook:
-  - **Payload URL**: Paste the **complete** webhook URL from step 1 (including the secret)
-    - ⚠️ Make sure you paste the ENTIRE URL with the secret token
-    - ⚠️ Do NOT manually type `<secret>` - use the actual URL from `oc describe`
+  - **Payload URL**: Paste the **complete** webhook URL from step 1 (with the real secret, not `<secret>`)
   - **Content type**: `application/json`
+  - **Secret**: Leave blank (the secret is already in the URL)
   - **SSL verification**:
     - For **production clusters**: Enable SSL verification
-    - For **local CRC/testing**: Disable SSL verification (since CRC uses self-signed certificates)
+    - For **local CRC**: Will not work (GitHub cannot reach local endpoints)
   - **Which events would you like to trigger this webhook?**: Select "Just the push event"
   - **Active**: ✅ Checked
 - Click **Add webhook**
 
-**Example webhook configuration:**
+**Example webhook configuration (Production):**
 ```
-Payload URL: https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/random-book-store-app-2/buildconfigs/random-book-store/webhooks/aBc123DeF456/github
+Payload URL: https://api.mycluster.example.com:6443/apis/build.openshift.io/v1/namespaces/random-book-store-app-2/buildconfigs/random-book-store/webhooks/qwEHhEuk2cvRN5K1bBuE/github
 Content type: application/json
-SSL verification: Disable SSL verification (for local CRC)
+Secret: (leave blank)
+SSL verification: Enable SSL verification
 Events: Just the push event
 Active: ✓
 ```
 
-**Note**: The secret in the URL (like `aBc123DeF456`) is auto-generated by OpenShift and is different for each BuildConfig.
-
-**4. Test the Webhook**
+**3. Test the Webhook** (Production Only)
 
 ```bash
 # Make a small change and push to GitHub
-echo "# Test webhook" >> README.md
-git add README.md
-git commit -m "Test webhook trigger"
+git commit --allow-empty -m "Test webhook trigger"
 git push
 
 # Watch for a new build to start automatically
@@ -711,37 +777,55 @@ NAME                     TYPE     FROM          STATUS     STARTED
 random-book-store-11     Source   Git@abc1234   Running    2 seconds ago
 ```
 
-**5. Verify Webhook in GitHub**
+**4. Verify Webhook in GitHub** (Production Only)
 
 - Go back to GitHub → Settings → Webhooks
 - Click on your webhook
 - Scroll to **Recent Deliveries**
 - You should see a delivery with a ✅ green checkmark and response code `200`
 
-**Troubleshooting Webhooks:**
+---
 
-1. **Webhook shows red X in GitHub**:
-   - Check if OpenShift API is accessible from the internet (for hosted GitHub)
-   - For local CRC, webhooks won't work unless CRC is publicly accessible (use `oc start-build` manually instead)
+### Troubleshooting Webhooks
 
-2. **No build triggered after push**:
-   - Verify webhook is active in GitHub
-   - Check webhook delivery logs in GitHub (Settings → Webhooks → Recent Deliveries)
-   - Ensure the branch matches (webhook triggers on the branch specified in BuildConfig)
+**1. "We couldn't deliver this payload: failed to connect to host" (Red X in GitHub)**
 
-3. **SSL verification errors**:
-   - For local CRC: Disable SSL verification in GitHub webhook settings
-   - For production: Use valid SSL certificates
+This is **EXPECTED and NORMAL** for local CRC:
+- ✅ **Using local CRC (`api.crc.testing`)**: This error is expected. GitHub cannot reach your local machine.
+- **Solution**: Use manual builds: `oc start-build random-book-store --follow`
+- ❌ **Using production OpenShift**: Check firewall rules and ensure the API is publicly accessible
 
-**Note for Local Development (CRC):**
-GitHub webhooks typically **won't work with local CRC** because GitHub cannot reach `api.crc.testing` from the internet. For local development, manually trigger builds:
+**2. No build triggered after push (Production):**
+- Verify webhook is active in GitHub (Settings → Webhooks)
+- Check webhook delivery logs in GitHub (Settings → Webhooks → Recent Deliveries)
+- Ensure the branch matches (webhook triggers on the branch specified in BuildConfig)
+- Verify the webhook URL includes the correct secret
+
+**3. SSL verification errors (Production):**
+- Ensure your production OpenShift cluster has valid SSL certificates
+- For testing only, you can disable SSL verification in GitHub webhook settings (not recommended for production)
+
+---
+
+### Manual Build Workflow (Recommended for Local CRC)
+
+For local development with CRC, use this workflow:
 
 ```bash
-# Manual build trigger (always works)
+# 1. Make changes to your code
+# 2. Commit and push to GitHub
+git add .
+git commit -m "Update application"
+git push
+
+# 3. Manually trigger OpenShift build
 oc start-build random-book-store --follow
+
+# 4. Verify deployment
+oc get pods -w
 ```
 
-For production OpenShift clusters with public APIs, webhooks work perfectly and enable CI/CD workflows.
+This is the standard and recommended approach for local OpenShift development.
 
 ---
 
@@ -768,10 +852,18 @@ Alternatively, edit `openshift/secret.yaml` before deploying and replace the def
 ### Scale the Application
 
 ```bash
+# Scale up
 oc scale deployment/random-book-store --replicas=3
 
 # Scale down
 oc scale deployment/random-book-store --replicas=1
+
+# Horizontal Scaling
+oc scale deployment/random-book-store --replicas=3
+
+# Autoscaling:
+oc autoscale deployment/random-book-store \
+  --min=2 --max=10 --cpu-percent=75
 ```
 
 ### View Logs
@@ -795,6 +887,8 @@ oc get route random-book-store
 # The URL will be something like:
 # https://random-book-store-<project-name>.apps.<cluster-domain>
 ```
+
+---
 
 ## Monitoring
 
@@ -821,20 +915,7 @@ oc adm top pods -l app=random-book-store
 oc adm top nodes
 ```
 
-## Troubleshooting
-
-### Pods Not Starting
-
-```bash
-# Describe pod
-oc describe pod <pod-name>
-
-# Check events
-oc get events --sort-by='.lastTimestamp'
-
-# Check logs
-oc logs <pod-name>
-```
+---
 
 ## Cleanup
 
@@ -870,33 +951,15 @@ oc delete pvc random-book-store-pvc
 oc delete secret random-book-store-secret
 ```
 
-## Production Considerations
+---
 
-### 1. Database (PostgreSQL Recommended)
+## Additional Resources
 
-For production, replace SQLite with PostgreSQL:
+- [OpenShift Documentation](https://docs.openshift.com/)
+- [Source-to-Image (S2I) Documentation](https://github.com/openshift/source-to-image)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [Open Library API](https://openlibrary.org/developers/api)
 
-```bash
-# Deploy PostgreSQL from template
-oc new-app postgresql-persistent \
-  --param DATABASE_NAME=random_book_store \
-  --param DATABASE_USER=random_book_store \
-  --param DATABASE_PASSWORD=$(openssl rand -base64 32)
+---
 
-# Update deployment with PostgreSQL connection
-oc set env deployment/random-book-store \
-  DATABASE_URL="postgresql://random_book_store:password@postgresql:5432/random_book_store"
-```
-
-### 2. Scaling and Resources
-
-**Horizontal Scaling:**
-```bash
-oc scale deployment/random-book-store --replicas=3
-```
-
-**Autoscaling:**
-```bash
-oc autoscale deployment/random-book-store \
-  --min=2 --max=10 --cpu-percent=75
-```
+**For questions or issues, refer to the main [README.md](../README.md) or [QUICKSTART.md](../QUICKSTART.md)**

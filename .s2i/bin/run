@@ -4,9 +4,6 @@
 
 echo "🚀 Starting Random Book Store application..."
 
-# Run database migrations (if you add them later)
-# python manage.py db upgrade
-
 # Start Gunicorn with custom settings
 exec gunicorn \
   --bind 0.0.0.0:8080 \

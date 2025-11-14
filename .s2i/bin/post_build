@@ -4,12 +4,6 @@
 
 echo "🧪 Running post-build hook..."
 
-# Run tests (optional - comment out if you don't want tests during build)
-# python -m pytest tests/ || exit 1
-
-# Initialize database schema (if needed)
-# python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all()"
-
 # Verify all dependencies are installed
 pip list
 

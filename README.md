@@ -25,150 +25,6 @@ A dynamic Flask-based bookstore that automatically refreshes with random books f
 - **Container**: Red Hat UBI9 Python 3.12
 - **Deployment**: OpenShift 4.x / Kubernetes 1.24+
 
-## OpenShift Compliance
-
-This application follows OpenShift security and deployment best practices:
-
-- ✅ Runs as **non-root user** (UID 1001)
-- ✅ Uses **non-privileged port** 8080
-- ✅ Implements **health check endpoints** (`/health`, `/ready`)
-- ✅ Proper **file permissions** for random UID assignment (GID 0)
-- ✅ Uses **Red Hat UBI** base image
-- ✅ Includes **resource limits** and **security context**
-
-## Local Development
-
-### Prerequisites
-
-- Python 3.12+ (3.11+ supported)
-- pip
-
-### Setup
-
-1. **Create a virtual environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the application:**
-   ```bash
-   python wsgi.py
-   ```
-
-   On first run, the app will:
-   - Create the database
-   - Fetch 12 real books from Open Library API
-   - Populate the catalog with actual book data and covers
-
-4. **Access the application:** Open your browser to `http://localhost:8080`
-
-### Reset Database (Get Fresh Books)
-
-To reset the database and fetch new books from Open Library:
-
-```bash
-rm random-book-store.db
-python wsgi.py
-```
-
-## OpenShift Deployment
-
-### Option 1: Local OpenShift Build (Recommended for Local Development)
-
-Build the container directly in OpenShift from local source:
-
-```bash
-# Create project and build
-cd /path/to/store-app
-oc new-project random-book-store-app
-oc new-build --name=random-book-store --binary --strategy=docker
-oc start-build random-book-store --from-dir=. --follow
-
-# Deploy
-oc create secret generic random-book-store-secret \
-  --from-literal=secret-key=$(openssl rand -hex 32)
-oc apply -f openshift/pvc.yaml
-oc new-app random-book-store --name=random-book-store
-oc set env deployment/random-book-store --from secret/random-book-store-secret
-oc set volume deployment/random-book-store \
-  --add --name=data --type=persistentVolumeClaim \
-  --claim-name=random-book-store-pvc --mount-path=/opt/app-root/src/data
-oc expose svc/random-book-store
-
-# Get URL
-oc get route random-book-store
-```
-
-### Option 2: Using Docker Hub (For Production/Sharing)
-
-Build locally and push to Docker Hub:
-
-```bash
-# Build and push to Docker Hub
-docker build -t random-book-store:latest .
-docker tag random-book-store:latest <your-dockerhub-username>/random-book-store:latest
-docker push <your-dockerhub-username>/random-book-store:latest
-
-# Deploy from Docker Hub
-oc new-project random-book-store-app
-oc create secret generic random-book-store-secret \
-  --from-literal=secret-key=$(openssl rand -hex 32)
-oc apply -f openshift/pvc.yaml
-oc new-app <your-dockerhub-username>/random-book-store:latest --name=random-book-store
-oc set env deployment/random-book-store --from secret/random-book-store-secret
-oc set volume deployment/random-book-store \
-  --add --name=data --type=persistentVolumeClaim \
-  --claim-name=random-book-store-pvc --mount-path=/opt/app-root/src/data
-oc expose svc/random-book-store
-```
-
-### Option 3: Using Source-to-Image (For Git Repositories)
-
-Let OpenShift build from your Git repository:
-
-```bash
-# Deploy from GitHub (requires public repo or authentication)
-oc new-project random-book-store-app
-oc create secret generic random-book-store-secret \
-  --from-literal=secret-key=$(openssl rand -hex 32)
-oc new-app python:3.12-ubi9~https://github.com/<your-repo>/store-app \
-  --name=random-book-store
-oc apply -f openshift/pvc.yaml
-oc set volume deployment/random-book-store \
-  --add --name=data --type=persistentVolumeClaim \
-  --claim-name=random-book-store-pvc --mount-path=/opt/app-root/src/data
-oc expose svc/random-book-store
-oc get route random-book-store
-```
-
-**For detailed instructions, S2I build hooks, and troubleshooting**, see `openshift/DEPLOYMENT.md`.
-
-## Configuration
-
-### Environment Variables
-
-- `SECRET_KEY`: Flask secret key for session management
-- `DATABASE_URL`: Database connection string (optional, defaults to SQLite)
-- `PORT`: Application port (default: 8080)
-- `BOOKS_REFRESH_INTERVAL_MINUTES`: How often to fetch new books (default: 10)
-- `BOOKS_COUNT`: Number of books to fetch (default: 12)
-
-### Database
-
-- **Development**: Uses SQLite (`random-book-store.db`)
-- **Production**: Configure `DATABASE_URL` for PostgreSQL
-
-## Health Endpoints
-
-- `/health` - Liveness probe (checks if app is running)
-- `/ready` - Readiness probe (checks if app is ready to serve traffic)
-
 ## Project Structure
 
 ```
@@ -206,7 +62,9 @@ store-app/
 ├── requirements.txt        # Python dependencies
 ├── README.md               # This file
 ├── QUICKSTART.md           # Quick start guide
-└── STRUCTURE.md            # Repository structure
+├── .dockerignore           # Docker ignore rules
+└── .gitignore              # Git ignore rules
+
 ```
 
 ## Book Data Source & Auto-Refresh
@@ -218,16 +76,12 @@ The application uses the **Open Library API** (https://openlibrary.org) to dynam
 - **Real data**: Actual book titles, authors, ISBNs, publication dates, and cover images
 - **Cover images**: Served from Open Library's CDN (`covers.openlibrary.org`)
 
-### Automatic Refresh (New!)
+### Automatic Refresh
 - **Every 10 minutes** (configurable): Background scheduler fetches fresh random books
 - **Complete rotation**: Old books are replaced with entirely new selections
-- **Always fresh**: Visitors see different books on each visit
-- **No downtime**: Refresh happens in the background
 
 ### Book Selection
-- **Diverse catalog**: Random selection from fiction, sci-fi, mystery, romance, fantasy, history, biography, and science
-- **Quality filtering**: Only books with ISBNs and cover images
-- **No duplicates**: Deduplication ensures variety
+- **Filtering**: Only books with ISBNs and cover images
 - **Demo pricing**: Prices ($9.99-$24.99) and stock (5-30 units) are randomized for demonstration
 
 ### Configuration
@@ -242,26 +96,3 @@ Set via environment variables:
 3. Add books to cart
 4. View and update cart
 5. Complete checkout
-
-## Security Notes
-
-- **Production secrets**: Always change `SECRET_KEY` in production (see `openshift/secret.yaml`)
-- **Password security**: User passwords are hashed using Werkzeug's `generate_password_hash`
-- **No payment processing**: Checkout is demonstration only, no real transactions
-- **HTTPS recommended**: Use TLS/SSL for production deployments
-- **OpenShift SCC**: Runs with restricted security context (non-root, no privilege escalation)
-
-## Contributing
-
-This is a demo application for educational purposes. Feel free to fork and modify for your needs.
-
-## Additional Resources
-
-- [Open Library API Documentation](https://openlibrary.org/developers/api)
-- [OpenShift Documentation](https://docs.openshift.com/)
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [Bootstrap Documentation](https://getbootstrap.com/docs/5.3/)
-
-## License
-
-MIT License - Free to use for educational and demonstration purposes.
