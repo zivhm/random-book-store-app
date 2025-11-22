@@ -4,27 +4,27 @@ A dynamic Flask-based bookstore that automatically refreshes with random books f
 
 ## Features
 
-- Auto-Refreshing Catalog**: Books automatically refresh every 10 minutes (configurable) with new random selections from Open Library
-- Real Book Data**: Fetches actual books from Open Library API with covers, titles, authors, and ISBNs
-- Homepage**: Welcome page with featured books and cover images
-- Book Catalog**: Browse all available books with pagination and cover art
-- Book Details**: Individual book pages with large cover images from Open Library
-- User Authentication**: Secure register and login with password hashing
-- Shopping Cart**: Add/remove books, update quantities (with thumbnails)
-- Checkout**: Simple checkout process (demo only, no payment processing)
-- Health Checks**: Built-in liveness and readiness probes for Kubernetes/OpenShift
+- Auto-Refreshing Catalog: Books automatically refresh every 10 minutes (configurable) with new random selections from Open Library
+- Real Book Data: Fetches actual books from Open Library API with covers, titles, authors, and ISBNs
+- Homepage: Welcome page with featured books and cover images
+- Book Catalog: Browse all available books with pagination and cover art
+- Book Details: Individual book pages with large cover images from Open Library
+- User Authentication: Secure register and login with password hashing
+- Shopping Cart: Add/remove books, update quantities (with thumbnails)
+- Checkout: Simple checkout process (demo only, no payment processing)
+- Health Checks: Built-in liveness and readiness probes for Kubernetes/OpenShift
 
 ## Book Data Source & Auto-Refresh
 
 The application uses the **Open Library API** (https://openlibrary.org) to dynamically populate the catalog:
 
 ### Initial Load
-- **On first run**: Automatically fetches 12 trending books from multiple subjects
-- **Real data**: Actual book titles, authors, ISBNs, publication dates, and cover images
-- **Cover images**: Served from Open Library's CDN (`covers.openlibrary.org`)
+- On first run: Automatically fetches 12 trending books from multiple subjects
+- Real data: Actual book titles, authors, ISBNs, publication dates, and cover images
+- Cover images: Served from Open Library's CDN (`covers.openlibrary.org`)
 
 ### Automatic Refresh
-- **Every 10 minutes** (configurable): Background scheduler fetches fresh random books
+- Every 10 minutes (configurable): Background scheduler fetches fresh random books
 
 ### Configuration
 Set via environment variables:
@@ -52,14 +52,14 @@ Set via environment variables:
 
 ## Technology Stack
 
-- **Backend**: Python 3.12, Flask 3.0, Flask-Login, Flask-SQLAlchemy
-- **Scheduler**: APScheduler for automatic book rotation
-- **Database**: SQLite (development) / PostgreSQL (production ready)
-- **Frontend**: HTML5, CSS3, Bootstrap 5, Jinja2 templates
-- **API Integration**: Open Library API for real book data
-- **WSGI Server**: Gunicorn (production)
-- **Container**: Red Hat UBI9 Python 3.12
-- **Deployment**: OpenShift 4.x / Kubernetes 1.24+
+- Backend: Python 3.12, Flask 3.0, Flask-Login, Flask-SQLAlchemy
+- Scheduler: APScheduler for automatic book rotation
+- Database: SQLite (development) / PostgreSQL (production ready)
+- Frontend: HTML5, CSS3, Bootstrap 5, Jinja2 templates
+- API Integration: Open Library API for real book data
+- WSGI Server: Gunicorn (production)
+- Container: Red Hat UBI9 Python 3.12
+- Deployment: OpenShift 4.x / Kubernetes 1.24+
 
 ## Project Structure
 
