@@ -1,5 +1,7 @@
 # Random Book Store - OpenShift Deployment
 
+A Flask-based bookstore that automatically refreshes its catalog with random books from Open Library and is configured for deployment on OpenShift.
+
 A dynamic Flask-based bookstore that automatically refreshes with random books from Open Library every 10 minutes, designed for deployment on OpenShift.
 
 ## Features
